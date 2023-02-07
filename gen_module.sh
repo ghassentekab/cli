@@ -113,7 +113,7 @@ Choose an option:"
 }
 mainmenu() {
 echo -ne "
-$(cyanprint 'Tekab-dev Modules generator.')
+$(cyanprint '\{^_^}/ Tekab-dev Modules generator.')
 
 $(magentaprint 'MAIN MENU')
 $(greenprint '1) Social Media Sharer')
