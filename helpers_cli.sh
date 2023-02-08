@@ -23,7 +23,7 @@ generate_module(){
 #sudo chmod 777 /usr/local/bin/yq
 
 #git clone --single-branch --branch $1 https://gitlab.com/tekab-dev-team/testing/cli-testing.git $1
-curl -s --request GET --header PRIVATE-TOKEN:glpat-SMWi7Y9TmbE1S6wBwnpi https://gitlab.com/api/v4/projects/43331160/repository/archive/ | tar -xz --wildcards */$1 --strip-components=1
+curl -s --request GET --header "PRIVATE-TOKEN:glpat-SMWi7Y9TmbE1S6wBwnpi" "https://gitlab.com/api/v4/projects/43331160/repository/archive/" | tar -xz --wildcards "*/$1" --strip-components=1
 echo "done"
 updatable=( "app.module.json" "docker-compose.yml" "package.json" ".env" "grants.json" "schema.prisma" )
 ignore=("/.git/")
