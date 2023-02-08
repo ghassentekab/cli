@@ -17,10 +17,16 @@ cyanprint() { printf "${CYAN}%s${RESET}\n" "$1"; }
 fn_bye() { echo "$(magentaprint 'Tekab-dev Modules Generator: EXIT')"; exit 0; }
 fn_fail() { echo "$(redprint 'Wrong option.')"; }
 
+## function that take module name as arg ($1: module name)
 generate_module(){
-sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-sudo chmod 777 /usr/local/bin/yq
-git clone --single-branch --branch $1 https://gitlab.com/tekab-dev-team/testing/cli-testing.git $1
+#sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+#sudo chmod 777 /usr/local/bin/yq
+
+#git clone --single-branch --branch $1 https://gitlab.com/tekab-dev-team/testing/cli-testing.git $1
+curl -s --request GET --header PRIVATE-TOKEN:glpat-SMWi7Y9TmbE1S6wBwnpi https://gitlab.com/api/v4/projects/43331160/repository/archive/ | tar -xz --wildcards */$1 --strip-components=1&
+PID=$!
+wait $PID
+echo "done"
 updatable=( "app.module.json" "docker-compose.yml" "package.json" ".env" "grants.json" "schema.prisma" )
 ignore=("/.git/")
 cd $1
@@ -92,66 +98,57 @@ sudo docker-compose cp server-dev:/app/node_modules ./server/
 
 }
 
+get_modules_names () {
+res=$(curl -s --header "PRIVATE-TOKEN: glpat-SMWi7Y9TmbE1S6wBwnpi" "https://gitlab.com/api/v4/projects/43331160/repository/tree")
+while read i; do
+    type=$(jq '.type'<<< $i)
+    path=$(jq '.path'<<< $i)
+    if [[ "$type" == *"tree"* ]] && [[ "$path" != *"."* ]]; then
+        modules_names+=("$path")
+    fi
+done < <(jq -c '.[]' <<< $res)
+}
+
 submenu() {
 echo -ne "
 $(greenprint '1) return to main menu')
 $(redprint '0) Exit') 
+
 Choose an option:"
     read -r ans
     case $ans in
     1)
-        generate_module "shareSocialMedia"
-        ;;
-    0)
-        fn_bye
+        mainmenu
         ;;
     *)
-        fn_fail
-        submenu
+        fn_bye
         ;;
     esac
 }
-mainmenu() {
-echo -ne "
-$(cyanprint '\{^_^}/ Tekab-dev Modules generator.')
 
-$(magentaprint 'MAIN MENU')
-$(greenprint '1) Social Media Sharer')
-$(greenprint '2) E-mail')
-$(greenprint '3) E-mail with invitation')
-$(greenprint '4) Server Upload')
-$(greenprint '5) ImageKit')
-$(greenprint '6) merge-yaml-wip')
-$(redprint '0) Exit') 
+mainmenu() {
+echo -e "\nChoose a helper module to add"
+for index in "${!modules_names[@]}";
+do
+    echo $(greenprint "$((index+1))) ${modules_names[$index]//\"/}")
+done
+echo -ne "$(redprint '0) Exit') 
+
 Choose an option:  "
     read -r ans
-    case $ans in
-    1)
-        generate_module "shareSocialMedia"
-        ;;
-    2)
-        generate_module "E-email"
-        ;;
-    3)
-        generate_module "email-with-invitation"
-        ;;
-    4)
-        generate_module "server-upload"
-        ;;
-    5)
-        generate_module "imageKit"
-        ;;
-    6)
-        generate_module "merge-yaml-wip"
-        ;;
-    0)
+    if [ $ans == 0 ]; then
         fn_bye
-        ;;
-    *)
+    elif  [ $ans -le ${#modules_names[@]} ]; then
+        generate_module "terraform" #${modules_names[$ans-1]}
+    else
         fn_fail
         submenu
-        ;;
-    esac
+    fi
 }
 
+modules_names=()
+echo -e "\n$(cyanprint '\{^_^}/ Tekab-dev Modules Generator.\n')"
+get_modules_names
 mainmenu
+
+
