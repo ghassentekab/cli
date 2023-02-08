@@ -19,15 +19,14 @@ fn_fail() { echo "$(redprint 'Wrong option.')"; }
 
 ## function that take module name as arg ($1: module name)
 generate_module(){
-#sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-#sudo chmod 777 /usr/local/bin/yq
+# removing suffix and prefix quotes from module name
+module_name="${1%\"}"
+module_name="${module_name#\"}"
 
-#git clone --single-branch --branch $1 https://gitlab.com/tekab-dev-team/testing/cli-testing.git $1
-curl -s --request GET --header "PRIVATE-TOKEN:glpat-SMWi7Y9TmbE1S6wBwnpi" "https://gitlab.com/api/v4/projects/43331160/repository/archive/" | tar -xz --wildcards "*/${1##*/}" --strip-components=1
-echo "done"
+curl -s --request GET --header "PRIVATE-TOKEN:glpat-SMWi7Y9TmbE1S6wBwnpi" "https://gitlab.com/api/v4/projects/43331160/repository/archive/" | tar -xz --wildcards */$module_name --strip-components=1 || exit 1
 updatable=( "app.module.json" "docker-compose.yml" "package.json" ".env" "grants.json" "schema.prisma" )
 ignore=("/.git/")
-cd $1
+cd $module_name
 files=$(find . -type f -print)
 for file in $files; do
     file_name="${file##*/}"
@@ -86,7 +85,7 @@ for file in $files; do
     fi
 done
 cd ..
-rm -rf $1
+rm -rf $module_name
 API_URL=$(grep "API_URL" .env | cut -d '=' -f2)
 sudo rm -rf server/node_modules
 sudo rm -rf client-ui/node_modules
@@ -147,6 +146,9 @@ Choose an option:  "
 modules_names=()
 echo -e "\n$(cyanprint '\{^_^}/ Tekab-dev Modules Generator.\n')"
 get_modules_names
+if [ ${#modules_names[@]} -eq 0 ]; then
+echo -e "$(redprint 'Coudn t load modules.\nExit')" && exit 1
+fi
 mainmenu
 
 
