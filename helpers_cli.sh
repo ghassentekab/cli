@@ -139,7 +139,7 @@ Choose an option:  "
     if [ $ans == 0 ]; then
         fn_bye
     elif  [ $ans -le ${#modules_names[@]} ]; then
-        generate_module "terraform" #${modules_names[$ans-1]}
+        generate_module ${modules_names[$ans-1]}
     else
         fn_fail
         submenu
