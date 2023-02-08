@@ -23,6 +23,8 @@ generate_module(){
 module_name="${1%\"}"
 module_name="${module_name#\"}"
 
+sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+sudo chmod 777 /usr/local/bin/yq
 curl -s --request GET --header "PRIVATE-TOKEN:glpat-SMWi7Y9TmbE1S6wBwnpi" "https://gitlab.com/api/v4/projects/43331160/repository/archive/" | tar -xz --wildcards */$module_name --strip-components=1 || exit 1
 updatable=( "app.module.json" "docker-compose.yml" "package.json" ".env" "grants.json" "schema.prisma" )
 ignore=("/.git/")
