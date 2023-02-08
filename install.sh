@@ -58,7 +58,7 @@ sudo bash -c 'docker plugin install sapk/plugin-rclone --grant-all-permissions'
 shopt -s expand_aliases
 echo 'alias devfactory_backup="/home/gitpod/.dotfiles/bootstrap_backup.sh"' >> /home/gitpod/.bashrc
 echo 'alias devfactory_restore="/home/gitpod/.dotfiles/bootstrap_restore.sh"' >> /home/gitpod/.bashrc
-echo 'alias tekab="/home/gitpod/.dotfiles/gen_module.sh"' >> /home/gitpod/.bashrc
+echo 'alias tekab="/home/gitpod/.dotfiles/helpers_cli.sh"' >> /home/gitpod/.bashrc
 # sudo bash -c 'docker volume create --driver sapk/plugin-rclone --opt config="$(base64 ~/.config/rclone/rclone.conf)" --opt args="--allow-root --allow-other --allow-non-empty" --opt remote=google_drive:${THEIA_WORKSPACE_ROOT} --name postgres'
 
 
