@@ -25,32 +25,45 @@ module_name="${module_name#\"}"
 
 sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
 sudo chmod 777 /usr/local/bin/yq
+read -p "Name of the client folder: [client-ui] " client_folder
+client_folder=${client_folder:-client-ui}
+read -p "Name of the server folder: [server] " server_folder
+server_folder=${server_folder:-server}
+client_base=${client_folder%%-*}
 curl -s --request GET --header "PRIVATE-TOKEN:glpat-SMWi7Y9TmbE1S6wBwnpi" "https://gitlab.com/api/v4/projects/43331160/repository/archive/" | tar -xz --wildcards */$module_name --strip-components=1 || exit 1
 updatable=( "app.module.json" "docker-compose.yml" "package.json" ".env" "grants.json" "schema.prisma" )
 ignore=("/.git/")
 cd $module_name
+if [ -d "server" ] && [ "server" != "$server_folder" ]; then
+  mv "server" $server_folder
+fi
+if [ -d "client-ui" ] && [ "client-ui" != "$client_folder" ]; then
+  mv "client-ui" $client_folder
+fi
 files=$(find . -type f -print)
 for file in $files; do
     file_name="${file##*/}"
     if [[ "$file" != *"/.git/"* ]]; then
         if [[ " ${updatable[*]} " == *" $file_name "* ]]; then
             if [[ $file_name == "package.json" ]]; then
-                path="client-ui"
+                path="$client_folder"
                 if [[ "$file" == *"/server/"* ]]; then
-                    path="server"
+                    path="$server_folder"
                 fi
                 jq -s '.[0] * .[1]' $path/package.json ../$path/package.json > ../$path/package.tmp.json
                 mv ../$path/package.tmp.json ../$path/package.json
             fi
             if [[ $file_name == "docker-compose.yml" ]]; then
+                sed -i "s/vue-app-dev/vue-app-dev-$client_base/g" docker-compose.yml
+                sed -i "s/vue-app-prod/vue-app-prod-$client_base/g" docker-compose.yml
                 yq eval-all '. as $item ireduce ({}; . *+ $item )' ../docker-compose.yml docker-compose.yml  > merged.yml
                 mv  merged.yml ../docker-compose.yml
             fi
             if [[ $file_name == "app.module.json" ]]; then
                 imports=$(jq '.imports' $file)
-                jq -r '.import[]' $file | cat - ../server/src/app.module.ts > temp.txt && mv temp.txt ../server/src/app.module.ts
+                jq -r '.import[]' $file | cat - ../$server_folder/src/app.module.ts > temp.txt && mv temp.txt ../$server_folder/src/app.module.ts
                 for module in $(echo $imports | jq -r '.[]'); do
-                    sed -i -e "0,/imports: \[/s//imports: \[ \n\t$module,/" ../server/src/app.module.ts
+                    sed -i -e "0,/imports: \[/s//imports: \[ \n\t$module,/" ../$server_folder/src/app.module.ts
                 done
             fi
             if [[ $file_name == ".env" ]]; then
@@ -75,11 +88,11 @@ for file in $files; do
                 mv env.tmp ../$file
             fi
             if [[ $file_name == "grants.json" ]]; then
-                jq -s add server/src/grants.json ../server/src/grants.json > ../server/src/grants.tmp.json
-                mv ../server/src/grants.tmp.json ../server/src/grants.json
+                jq -s add $server_folder/src/grants.json ../$server_folder/src/grants.json > ../$server_folder/src/grants.tmp.json
+                mv ../$server_folder/src/grants.tmp.json ../$server_folder/src/grants.json
             fi
             if [[ $file_name == "schema.prisma" ]]; then
-                sed -i "/^model User {/e cat server/prisma/schema.prisma" ../server/prisma/schema.prisma
+                sed -i "/^model User {/e cat $server_folder/prisma/schema.prisma" ../$server_folder/prisma/schema.prisma
             fi
         else
             cp --parents ${file} ../
@@ -89,12 +102,11 @@ done
 cd ..
 rm -rf $module_name
 API_URL=$(grep "API_URL" .env | cut -d '=' -f2)
-sudo rm -rf server/node_modules
-sudo rm -rf client-ui/node_modules
+sudo rm -rf $server_folder/node_modules
+sudo rm -rf $client_folder/node_modules
 api_url=$API_URL ./generate-open-api.sh
-sudo docker-compose cp vue-app-dev:/app/node_modules ./client-ui/
-sudo docker-compose cp server-dev:/app/node_modules ./server/
-
+sudo docker-compose cp vue-app-dev-$client_base:/app/node_modules ./$client_folder/
+sudo docker-compose cp server-dev:/app/node_modules ./$server_folder/
 }
 
 get_modules_names () {
@@ -152,5 +164,4 @@ if [ ${#modules_names[@]} -eq 0 ]; then
 echo -e "$(redprint 'Coudn t load modules.\nExit')" && exit 1
 fi
 mainmenu
-
 
